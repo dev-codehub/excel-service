@@ -11,11 +11,11 @@
 	<groupId>com.excel</groupId>
 	<artifactId>excel-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<url/>
 	<packaging>jar</packaging>
 
 	<name>excel-service</name>
 	<description>Excel Service lib</description>
+	<url>https://github.com/LeandroJ0se/excel-utils</url>
 	<licenses>
 		<license/>
 	</licenses>
@@ -29,10 +29,9 @@
 	</developers>
 
 	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
+		<connection>scm:git:git://github.com/LeandroJ0se/excel-utils.git</connection>
+		<developerConnection>scm:git:ssh://github.com/LeandroJ0se/excel-utils.git</developerConnection>
+		<url>https://github.com/LeandroJ0se/excel-utils</url>
 	</scm>
 
 	<properties>
@@ -57,6 +56,19 @@
 		</dependency>
 	</dependencies>
 
+	<distributionManagement>
+		<repository>
+			<id>ossrh</id>
+			<name>OSSRH Repository</name>
+			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+		</repository>
+		<snapshotRepository>
+			<id>ossrh-snapshots</id>
+			<name>OSSRH Snapshots</name>
+			<url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+		</snapshotRepository>
+	</distributionManagement>
+
 	<build>
 		<plugins>
 			<plugin>
@@ -70,6 +82,50 @@
 						</exclude>
 					</excludes>
 				</configuration>
+			</plugin>
+
+			<!-- To sign artifacts using GPG -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-gpg-plugin</artifactId>
+				<version>1.6</version>
+				<executions>
+					<execution>
+						<id>sign-artifacts</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- To include source and Javadoc JARs -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>3.3.1</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>3.3.0</version>
+				<executions>
+					<execution>
+						<id>attach-javadocs</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>
