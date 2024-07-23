@@ -9,26 +9,36 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.excel</groupId>
-	<artifactId>excel-utils</artifactId>
+	<artifactId>excel-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>excel-utils</name>
-	<description>Excel lib</description>
 	<url/>
+	<packaging>jar</packaging>
+
+	<name>excel-service</name>
+	<description>Excel Service lib</description>
 	<licenses>
 		<license/>
 	</licenses>
+
 	<developers>
-		<developer/>
+		<developer>
+			<id>LeandroJ0se</id>
+			<name>Leandro José</name>
+			<email>leandro_daniel08@hotmail.com</email>
+		</developer>
 	</developers>
+
 	<scm>
 		<connection/>
 		<developerConnection/>
 		<tag/>
 		<url/>
 	</scm>
+
 	<properties>
 		<java.version>17</java.version>
 	</properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -63,5 +73,4 @@
 			</plugin>
 		</plugins>
 	</build>
-
 </project>
