@@ -1,4 +1,4 @@
-# excel-generation
+# Excel Service
 
 This is a library ...
 
