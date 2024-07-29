@@ -12,25 +12,15 @@ import lombok.extern.jackson.Jacksonized;
 @Jacksonized
 public class Number {
     private Double value;
-    private String format;
     private StyleDTO styles;
 
     public static Number fromValue(Double value) {
-        return fromValue(value, null, null);
-    }
-
-    public static Number fromValue(Double value, String format) {
-        return fromValue(value, format, null);
+        return fromValue(value, null);
     }
 
     public static Number fromValue(Double value, StyleDTO styles) {
-        return fromValue(value, null, styles);
-    }
-
-    public static Number fromValue(Double value, String format, StyleDTO styles) {
         return Number.builder()
                 .value(value)
-                .format(format)
                 .styles(styles)
                 .build();
     }

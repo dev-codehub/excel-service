@@ -1,10 +1,12 @@
 package com.excel.lib.service;
 
 import com.excel.lib.model.dto.excel.ExcelColor;
+import com.excel.lib.model.dto.excel.ExcelColorBase;
 import com.excel.lib.model.dto.excel.ExcelCustomStyles;
 import com.excel.lib.model.dto.excel.StyleDTO;
 import com.excel.lib.model.dto.excel.datatype.DateExcel;
 import com.excel.lib.model.dto.excel.datatype.Merge;
+import com.excel.lib.model.dto.excel.datatype.Number;
 import com.excel.lib.model.dto.excel.datatype.StringExcel;
 import com.excel.lib.utils.ExcelUtils;
 import lombok.Getter;
@@ -25,7 +27,6 @@ public class StyleService {
     @Getter
     private final CellStyle dataCellStyle;
     private final Map<Class<?>, CellStyle> stylesMap;
-
 
     public StyleService(Workbook workbook, ExcelCustomStyles excelCustomStyles) {
         // Header and data default styles
@@ -49,6 +50,11 @@ public class StyleService {
         CellStyle stringCellStyle = workbook.createCellStyle();
         stringCellStyle.cloneStyleFrom(dataCellStyle);
         stylesMap.put(StringExcel.class, stringCellStyle);
+
+        // Number default styles
+        CellStyle numberCellStyle = workbook.createCellStyle();
+        numberCellStyle.cloneStyleFrom(dataCellStyle);
+        stylesMap.put(Number.class, numberCellStyle);
     }
 
     private void setDefaultStyles(Workbook workbook, ExcelCustomStyles excelCustomStyles) {
@@ -65,12 +71,7 @@ public class StyleService {
         headerCellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         headerCellStyle.setFillForegroundColor(IndexedColors.WHITE.getIndex());
         if (excelCustomStyles.isHeaderBorderActive()) {
-            headerCellStyle.setBorderTop(BorderStyle.THIN);
-            headerCellStyle.setBorderRight(BorderStyle.THIN);
-            headerCellStyle.setBorderBottom(BorderStyle.THIN);
-            headerCellStyle.setBorderLeft(BorderStyle.THIN);
-            BORDER_SIDES.forEach(border -> ((XSSFCellStyle) headerCellStyle).setBorderColor(border,
-                    excelCustomStyles.getHeaderBorderColor().getColor()));
+            setBorders(headerCellStyle, excelCustomStyles.getHeaderBorderColor());
         }
 
         // data default style
@@ -83,55 +84,45 @@ public class StyleService {
         dataCellStyle.setAlignment(HorizontalAlignment.CENTER);
         dataCellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
         if (excelCustomStyles.isDataBorderActive()) {
-            dataCellStyle.setBorderTop(BorderStyle.THIN);
-            dataCellStyle.setBorderRight(BorderStyle.THIN);
-            dataCellStyle.setBorderBottom(BorderStyle.THIN);
-            dataCellStyle.setBorderLeft(BorderStyle.THIN);
-            BORDER_SIDES.forEach(border -> ((XSSFCellStyle) dataCellStyle).setBorderColor(border, excelCustomStyles.getDataBorderColor().getColor()));
+            setBorders(dataCellStyle, excelCustomStyles.getDataBorderColor());
         }
     }
 
-    // TODO: replace by getCellStyle
+    private void setBorders(CellStyle cellStyle, ExcelColorBase color) {
+        cellStyle.setBorderTop(BorderStyle.THIN);
+        cellStyle.setBorderRight(BorderStyle.THIN);
+        cellStyle.setBorderBottom(BorderStyle.THIN);
+        cellStyle.setBorderLeft(BorderStyle.THIN);
+        BORDER_SIDES.forEach(border -> ((XSSFCellStyle) cellStyle).setBorderColor(border, color.getColor()));
+    }
+
     public CellStyle getHeaderCellStyle(Workbook workbook, StyleDTO styles) {
         if (styles == null) {
             return headerCellStyle;
         }
 
-        // Create a new cell style or the new styles will not be applied
-        CellStyle newCellStyle = workbook.createCellStyle();
-        newCellStyle.cloneStyleFrom(headerCellStyle);
-
-        // Get font from cell style
-        Font font = ExcelUtils.cloneFont(workbook, workbook.getFontAt(headerCellStyle.getFontIndex()));
-
         // Apply new styles and keep default values if not updated
-        setCellStyle(styles, newCellStyle, font);
-
-        return newCellStyle;
+        return getNewCellStyle(workbook, headerCellStyle, styles);
     }
 
     public CellStyle getCellStyle(Workbook workbook, Class<?> type, StyleDTO styles) {
-        CellStyle cellStyle = stylesMap.get(type);
+        CellStyle defaultCellStyle = stylesMap.get(type);
         if (styles == null) {
-            return cellStyle;
+            return defaultCellStyle;
         }
 
+        // Apply new styles and keep default values if not updated
+        return getNewCellStyle(workbook, defaultCellStyle, styles);
+    }
+
+    /**
+     * This method is responsible to apply styles in StyleDTO to an Excel cell
+     */
+    private CellStyle getNewCellStyle(Workbook workbook, CellStyle cellStyle, StyleDTO styles) {
         // Create a new cell style or the new styles will not be applied
         CellStyle newCellStyle = workbook.createCellStyle();
         newCellStyle.cloneStyleFrom(cellStyle);
 
-        // Get font from cell style
-        Font font = ExcelUtils.cloneFont(workbook, workbook.getFontAt(cellStyle.getFontIndex()));
-
-        // Apply new styles and keep default values if not updated
-        setCellStyle(styles, newCellStyle, font);
-
-        return newCellStyle;
-    }
-    /**
-     * This method is responsible to apply styles in StyleDTO to an Excel cell
-     */
-    private void setCellStyle(StyleDTO styles, CellStyle newCellStyle, Font font) {
         // Set alignments
         if (styles.getHorizontalAlignment() != null)
             newCellStyle.setAlignment(styles.getHorizontalAlignment());
@@ -144,6 +135,14 @@ public class StyleService {
             newCellStyle.setFillForegroundColor(styles.getForegroundColor().getColor());
         }
 
+        // Set format
+        if (styles.getFormat() != null)
+            newCellStyle.setDataFormat(workbook.createDataFormat().getFormat(styles.getFormat()));
+
+        // #### Set font ####
+        // Get font from cell style
+        Font font = ExcelUtils.cloneFont(workbook, workbook.getFontAt(cellStyle.getFontIndex()));
+
         // Set text color
         if (styles.getTextColor() != null)
             ((XSSFFont) font).setColor(styles.getTextColor().getColor());
@@ -155,7 +154,8 @@ public class StyleService {
         // Set bold
         if (styles.getBold() != null)
             font.setBold(styles.getBold());
-
         newCellStyle.setFont(font);
+
+        return newCellStyle;
     }
 }

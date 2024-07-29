@@ -5,6 +5,7 @@ import com.excel.lib.model.dto.excel.ExcelSettings;
 import com.excel.lib.model.dto.excel.StyleDTO;
 import com.excel.lib.model.dto.excel.datatype.DateExcel;
 import com.excel.lib.model.dto.excel.datatype.Merge;
+import com.excel.lib.model.dto.excel.datatype.Number;
 import com.excel.lib.model.dto.excel.datatype.StringExcel;
 import com.excel.lib.model.dto.exception.ResponseCode;
 import com.excel.lib.utils.DateUtils;
@@ -162,6 +163,9 @@ public class ExcelServiceImpl implements ExcelService {
         } else if (value instanceof StringExcel stringExcel) {
             cell.setCellValue(stringExcel.getValue());
             cell.setCellStyle(styleService.getCellStyle(workbook, StringExcel.class, stringExcel.getStyles()));
+        } else if (value instanceof Number number) {
+            cell.setCellValue(number.getValue());
+            cell.setCellStyle(styleService.getCellStyle(workbook, Number.class, number.getStyles()));
         } else if (value instanceof Boolean bool) {
             cell.setCellValue(bool);
         } else if (value instanceof Merge merge) {

@@ -25,4 +25,5 @@ public class StyleDTO {
     private HorizontalAlignment horizontalAlignment;
     private Integer minWidth;
     private Integer maxWidth;
+    private String format;
 }
