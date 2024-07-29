@@ -167,16 +167,15 @@ public class ExcelServiceImpl implements ExcelService {
         } else if (value instanceof Merge merge) {
             String cellValue = merge.getValue();
             if (StringUtils.hasLength(cellValue)) {
-                // TODO: review merge range and offsets
-                if (merge.getRange() > 0) {
+                if (merge.getRange() > 1) {
                     switch (merge.getOrientation()) {
                         case VERTICAL:
-                            sheet.addMergedRegion(new CellRangeAddress(rowIndex, rowIndex + merge.getRange(), colIndex + merge.getOffset(),
+                            sheet.addMergedRegion(new CellRangeAddress(rowIndex, rowIndex + merge.getRange() - 1, colIndex + merge.getOffset(),
                                     colIndex + merge.getOffset()));
                             break;
                         case HORIZONTAL:
                             sheet.addMergedRegion(new CellRangeAddress(rowIndex, rowIndex, colIndex + merge.getOffset(),
-                                    colIndex + merge.getOffset() + merge.getRange()));
+                                    colIndex + merge.getOffset() + merge.getRange() - 1));
                             break;
                         default:
                             break;
