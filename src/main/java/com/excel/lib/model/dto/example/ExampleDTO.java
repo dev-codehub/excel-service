@@ -1,5 +1,7 @@
 package com.excel.lib.model.dto.example;
 
+import com.excel.lib.model.dto.excel.datatype.Merge;
+import com.excel.lib.model.dto.excel.datatype.Number;
 import com.excel.lib.model.dto.excel.datatype.StringExcel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,5 +20,6 @@ import lombok.Setter;
 public class ExampleDTO {
     private StringExcel value1;
     private String value2;
-    private String value3;
+    private Number value3;
+    private Merge value4;
 }

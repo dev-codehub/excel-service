@@ -9,7 +9,8 @@ import lombok.AllArgsConstructor;
 public enum ExcelExampleHeader implements ExcelHeaderBase {
     VALUE1("value1", "Display Column 1", StyleDTO.builder().foregroundColor(ExcelColor.DARK_MINT).textColor(ExcelColor.WHITE).build()),
     VALUE2("value2", "Display Column 2", null),
-    VALUE3("value3", "Display Column 3", null);
+    VALUE3("value3", "Display Column 3", null),
+    VALUE4("value4", "Display Column 4", null);
 
     private final String field;
     private final String displayName;
