@@ -5,6 +5,7 @@ import com.excel.lib.model.dto.example.ExcelExampleHeader;
 import com.excel.lib.model.dto.excel.ExcelColor;
 import com.excel.lib.model.dto.excel.ExcelSettings;
 import com.excel.lib.model.dto.excel.StyleDTO;
+import com.excel.lib.model.dto.excel.datatype.Number;
 import com.excel.lib.model.dto.excel.datatype.StringExcel;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -66,7 +67,7 @@ public class ExcelServiceImplTest {
         // Verify cell font
         Font font = workbook.getFontAt(style.getFontIndex());
         assertEquals("Calibri", font.getFontName());
-        assertEquals(12, font.getFontHeightInPoints());
+        assertEquals(11, font.getFontHeightInPoints());
         assertFalse(font.getBold());
         assertEquals(ExcelColor.WHITE.getColor().getIndex(), font.getColor());
     }
@@ -79,17 +80,17 @@ public class ExcelServiceImplTest {
         ExampleDTO example1 = ExampleDTO.builder()
                 .value1(StringExcel.fromValue("Value1", name1Style))
                 .value2("value2")
-                .value3("value3")
+                .value3(Number.fromValue(15000.0, StyleDTO.builder().format("# ### ##0.00;[Red]-# ### ##0.00").build()))
                 .build();
         ExampleDTO example2 = ExampleDTO.builder()
                 .value1(StringExcel.fromValue("Value1", name1Style))
                 .value2("value2")
-                .value3("value3")
+                .value3(Number.fromValue(35000.0, StyleDTO.builder().format("# ### ##0.00;[Red]-# ### ##0.00").build()))
                 .build();
         ExampleDTO example3 = ExampleDTO.builder()
                 .value1(StringExcel.fromValue("Value1", name1Style))
                 .value2("value2")
-                .value3("value3")
+                .value3(Number.fromValue(-415000.0, StyleDTO.builder().format("# ### ##0.00;[Red]-# ### ##0.00").build()))
                 .build();
         return List.of(example1, example2, example3);
     }
