@@ -3,6 +3,7 @@ package com.excel.lib.service;
 import com.excel.lib.model.dto.example.ExampleDTO;
 import com.excel.lib.model.dto.example.ExcelExampleHeader;
 import com.excel.lib.model.dto.excel.ExcelColor;
+import com.excel.lib.model.dto.excel.ExcelHeaderBase;
 import com.excel.lib.model.dto.excel.ExcelSettings;
 import com.excel.lib.model.dto.excel.StyleDTO;
 import com.excel.lib.model.dto.excel.datatype.Number;
@@ -33,7 +34,7 @@ public class ExcelServiceImplTest {
     @Test
     void testGenerateDynamicExcelWorkbook() throws Exception {
         // Headers
-        List<ExcelExampleHeader> headers = List.of(ExcelExampleHeader.values());
+        List<ExcelHeaderBase> headers = List.of(ExcelExampleHeader.values());
 
         // List of objects
         List<ExampleDTO> exampleDTOList = getExampleDTOList();

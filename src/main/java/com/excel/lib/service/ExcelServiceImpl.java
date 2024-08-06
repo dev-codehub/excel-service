@@ -34,6 +34,13 @@ public class ExcelServiceImpl implements ExcelService {
     private final Logger log = LoggerFactory.getLogger(this.getClass());
     private StyleService styleService;
 
+    @Override
+    public byte[] generateDynamicExcel(List<? extends ExcelHeaderBase> headers, List<?> data, Class<?> dataClass,
+                                       ExcelSettings excelSettings) throws Exception {
+        return generateDynamicExcel(headers, data, dataClass, excelSettings, null);
+    }
+
+    @Override
     public byte[] generateDynamicExcel(List<? extends ExcelHeaderBase> headers, List<?> data, Class<?> dataClass,
                                        ExcelSettings excelSettings, Workbook workbook) throws Exception {
         try (Workbook generatedWorkbook = generateDynamicExcelWorkbook(headers, data, dataClass, excelSettings, workbook)) {
@@ -48,6 +55,12 @@ public class ExcelServiceImpl implements ExcelService {
         }
 
         throw new Exception(ResponseCode.ERROR_GENERATING_DYNAMIC_EXCEL.getMessage());
+    }
+
+    @Override
+    public Workbook generateDynamicExcelWorkbook(List<? extends ExcelHeaderBase> headers, List<?> data,
+                                                 Class<?> dataClass, ExcelSettings excelSettings) throws Exception {
+        return generateDynamicExcelWorkbook(headers, data, dataClass, excelSettings, null);
     }
 
     @Override
