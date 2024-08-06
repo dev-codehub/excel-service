@@ -26,9 +26,79 @@ Correction, you needed it, from now on it won't happen again.
 - ~~Read dinamically excel files~~
 
 # Setup
-1. Add dependency
-2. Add ExcelService to your project
+1. Add dependency to your project
+   ```xml
+        <!-- Excel Service -->
+        <dependency>
+            <groupId>com.excel</groupId>
+            <artifactId>excel-service</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+   ```
+2. Add Excel Service to your services
+   ```java
+    class ExampleService {
+        private final ExcelService excelService;
+   
+        public ExampleService(ExcelService excelService) {
+            this.excelService = excelService;
+        }
+    }
+   ```
 
 # Examples:
-1. 
+1. Simple Excel file with just one table and without custom styles
+```java
+    class ExampleService {
+        private final ExcelService excelService;
+   
+        public ExampleService(ExcelService excelService) {
+            this.excelService = excelService;
+        }
+   
+        public Resource generateExampleExcel() {
+            // Headers
+            List<ExcelHeaderBase> headers = List.of(ExcelExampleHeader.values());
+
+            // List of objects
+            List<ExampleDTO> exampleDTOList = repository.getExampleDTOList();
+
+            // Excel settings
+            ExcelSettings excelSettings = ExcelSettings.builder()
+                .sheetName("example")
+                // Multiple settings and styles available
+                .build();
+
+            // Generate excel
+            byte[] bytes = excelService.generateDynamicExcel(headers, exampleDTOList, ExampleDTO.class, excelSettings);
+
+            //...
+        }
+    }
+    
+    @Getter
+    @Setter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public class ExampleDTO {
+        private String value1;
+        private String value2;
+        private Number value3;
+        private Merge value4;
+    }
+   
+    @AllArgsConstructor
+    public enum ExcelExampleHeader implements ExcelHeaderBase {
+        VALUE1("value1", "Display Column 1"),
+        VALUE2("value2", "Display Column 2"),
+        VALUE3("value3", "Display Column 3"),
+        VALUE4("value4", "Display Column 4");
+    
+        private final String field;
+        private final String displayName;
+        
+        //...
+    }
+   ```
 
