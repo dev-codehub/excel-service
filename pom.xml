@@ -8,16 +8,19 @@
 		<version>3.3.2</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.excel</groupId>
+	<groupId>io.github.leandroj0se</groupId>
 	<artifactId>excel-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
-	<name>excel-service</name>
-	<description>Excel Service lib</description>
-	<url>https://github.com/LeandroJ0se/excel-utils</url>
+	<name>Excel Service</name>
+	<description>A Java library to create Excel workbooks dynamically, with a single line of code you can create an Excel workbook.</description>
+	<url>https://github.com/LeandroJ0se/excel-service</url>
 	<licenses>
-		<license/>
+		<license>
+			<name>Apache License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+		</license>
 	</licenses>
 
 	<developers>
@@ -25,13 +28,14 @@
 			<id>LeandroJ0se</id>
 			<name>Leandro José</name>
 			<email>leandro_daniel08@hotmail.com</email>
+			<url>https://github.com/LeandroJ0se</url>
 		</developer>
 	</developers>
 
 	<scm>
-		<connection>scm:git:git://github.com/LeandroJ0se/excel-utils.git</connection>
-		<developerConnection>scm:git:ssh://github.com/LeandroJ0se/excel-utils.git</developerConnection>
-		<url>https://github.com/LeandroJ0se/excel-utils</url>
+		<connection>scm:git:git://github.com/LeandroJ0se/excel-service.git</connection>
+		<developerConnection>scm:git:ssh://github.com/LeandroJ0se/excel-service.git</developerConnection>
+		<url>https://github.com/LeandroJ0se/excel-service</url>
 	</scm>
 
 	<properties>
