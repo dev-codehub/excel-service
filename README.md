@@ -30,7 +30,7 @@ Correction, you needed it, from now on it won't happen again.
    ```xml
         <!-- Excel Service -->
         <dependency>
-            <groupId>io.github.leandroj0se</groupId>
+            <groupId>io.github.dev-codehub</groupId>
             <artifactId>excel-service</artifactId>
             <version>1.0.0</version>
         </dependency>
