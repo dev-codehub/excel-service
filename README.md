@@ -14,11 +14,11 @@ Correction, you needed it, from now on it won't happen again.
 1. [Examples](#examples)
 
 # Requirements
-- Requires Java 1.8 or later.
+- Requires Java 8 or later.
 
 # Technologies
-- Java 21
-- Spring Boot 3
+- Java 8
+- Spring Boot 2
 - Apache POI
 
 # Features
@@ -32,7 +32,7 @@ Correction, you needed it, from now on it won't happen again.
         <dependency>
             <groupId>io.github.dev-codehub</groupId>
             <artifactId>excel-service</artifactId>
-            <version>1.0.1</version>
+            <version>1.0.2</version>
         </dependency>
    ```
 2. Add Excel Service to your services

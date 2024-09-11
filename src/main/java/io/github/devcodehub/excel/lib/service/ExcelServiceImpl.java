@@ -172,20 +172,24 @@ public class ExcelServiceImpl implements ExcelService {
         // Default style, this can change depending on the column type bellow
         cell.setCellStyle(styleService.getDataCellStyle());
 
-        if (value instanceof Date date) {
-            cell.setCellValue(DateUtils.getDateAsString(date));
-        } else if (value instanceof DateExcel dateExcel) {
+        if (value instanceof Date) {
+            cell.setCellValue(DateUtils.getDateAsString((Date) value));
+        } else if (value instanceof DateExcel) {
+            DateExcel dateExcel = (DateExcel) value;
             cell.setCellValue(dateExcel.getValue());
             cell.setCellStyle(styleService.getCellStyle(workbook, DateExcel.class, dateExcel.getStyles()));
-        } else if (value instanceof StringExcel stringExcel) {
+        } else if (value instanceof StringExcel) {
+            StringExcel stringExcel = (StringExcel) value;
             cell.setCellValue(stringExcel.getValue());
             cell.setCellStyle(styleService.getCellStyle(workbook, StringExcel.class, stringExcel.getStyles()));
-        } else if (value instanceof Number number) {
+        } else if (value instanceof Number) {
+            Number number = (Number) value;
             cell.setCellValue(number.getValue());
             cell.setCellStyle(styleService.getCellStyle(workbook, Number.class, number.getStyles()));
-        } else if (value instanceof Boolean bool) {
-            cell.setCellValue(bool);
-        } else if (value instanceof Merge merge) {
+        } else if (value instanceof Boolean) {
+            cell.setCellValue((Boolean) value);
+        } else if (value instanceof Merge) {
+            Merge merge = (Merge) value;
             String cellValue = merge.getValue();
             if (StringUtils.hasLength(cellValue)) {
                 if (merge.getRange() > 1) {
