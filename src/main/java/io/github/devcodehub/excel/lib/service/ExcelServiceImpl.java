@@ -7,6 +7,7 @@ import io.github.devcodehub.excel.lib.model.dto.excel.datatype.DateExcel;
 import io.github.devcodehub.excel.lib.model.dto.excel.datatype.Merge;
 import io.github.devcodehub.excel.lib.model.dto.excel.datatype.Number;
 import io.github.devcodehub.excel.lib.model.dto.excel.datatype.StringExcel;
+import io.github.devcodehub.excel.lib.model.dto.exception.ExcelGenerationException;
 import io.github.devcodehub.excel.lib.model.dto.exception.ResponseCode;
 import io.github.devcodehub.excel.lib.utils.DateUtils;
 import org.apache.poi.ss.usermodel.Cell;
@@ -35,47 +36,45 @@ public class ExcelServiceImpl implements ExcelService {
     private static final int DEFAULT_COLUMN_WIDTH = 10 * POI_DEFAULT_UNIT;
     private static final int MAX_COLUMN_WIDTH = 255 * POI_DEFAULT_UNIT;
     private static final int DEFAULT_COLUMN_MARGIN = 5 * POI_DEFAULT_UNIT;
+
     private final Logger log = LoggerFactory.getLogger(this.getClass());
-    private StyleService styleService;
 
     @Override
     public byte[] generateDynamicExcel(List<? extends ExcelHeaderBase> headers, List<?> data, Class<?> dataClass,
-                                       ExcelSettings excelSettings) throws Exception {
+                                       ExcelSettings excelSettings) throws ExcelGenerationException {
         return generateDynamicExcel(headers, data, dataClass, excelSettings, null);
     }
 
     @Override
     public byte[] generateDynamicExcel(List<? extends ExcelHeaderBase> headers, List<?> data, Class<?> dataClass,
-                                       ExcelSettings excelSettings, Workbook workbook) throws Exception {
-        try (Workbook generatedWorkbook = generateDynamicExcelWorkbook(headers, data, dataClass, excelSettings, workbook)) {
-            if (generatedWorkbook != null) {
-                // Convert workbook into a byte array
-                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-                generatedWorkbook.write(outputStream);
-                return outputStream.toByteArray();
-            }
+                                       ExcelSettings excelSettings, Workbook workbook) throws ExcelGenerationException {
+        try (Workbook generatedWorkbook = generateDynamicExcelWorkbook(headers, data, dataClass, excelSettings, workbook);
+             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            generatedWorkbook.write(outputStream);
+            return outputStream.toByteArray();
+        } catch (ExcelGenerationException e) {
+            throw e;
         } catch (IOException e) {
-            log.error("Error generating dynamic excel!", e);
+            log.error("Error writing excel to output stream!", e);
+            throw new ExcelGenerationException(ResponseCode.ERROR_GENERATING_DYNAMIC_EXCEL.getMessage(), e);
         }
-
-        throw new Exception(ResponseCode.ERROR_GENERATING_DYNAMIC_EXCEL.getMessage());
     }
 
     @Override
     public Workbook generateDynamicExcelWorkbook(List<? extends ExcelHeaderBase> headers, List<?> data,
-                                                 Class<?> dataClass, ExcelSettings excelSettings) throws Exception {
+                                                 Class<?> dataClass, ExcelSettings excelSettings) throws ExcelGenerationException {
         return generateDynamicExcelWorkbook(headers, data, dataClass, excelSettings, null);
     }
 
     @Override
     public Workbook generateDynamicExcelWorkbook(List<? extends ExcelHeaderBase> headers, List<?> data,
                                                  Class<?> dataClass, ExcelSettings excelSettings,
-                                                 Workbook workbook) throws Exception {
+                                                 Workbook workbook) throws ExcelGenerationException {
         String sheetName = excelSettings.getSheetName();
         log.info("Generating dynamic excel - Sheet name [{}]", sheetName);
 
         if (sheetName == null) {
-            throw new Exception("Sheet name must not be null. It must be defined in ExcelSettings.");
+            throw new ExcelGenerationException("Sheet name must not be null. It must be defined in ExcelSettings.");
         }
 
         try {
@@ -86,12 +85,13 @@ public class ExcelServiceImpl implements ExcelService {
             if (sheet == null)
                 sheet = workbook.createSheet(sheetName);
 
-            // This new instance of the service is necessary because we need to send the created workbook to get new styles from it
-            styleService = new StyleService(workbook, excelSettings.getExcelCustomStyles());
+            // StyleService is instantiated per call because POI CellStyle objects are bound to a specific Workbook instance
+            StyleService styleService = new StyleService(workbook, excelSettings.getExcelCustomStyles());
 
-            // Create data rows
             int rowOffset = excelSettings.getRowOffset();
             int colOffset = excelSettings.getColOffset();
+
+            // Create data rows
             int rowIndex = rowOffset + 1;
             for (Object dto : data) {
                 Row dataRow = sheet.createRow(rowIndex++);
@@ -99,35 +99,27 @@ public class ExcelServiceImpl implements ExcelService {
 
                 for (ExcelHeaderBase header : headers) {
                     Field field = dataClass.getDeclaredField(header.getField());
-                    field.setAccessible(true); // This is required to access private fields, otherwise it will throw IllegalAccessException
+                    field.setAccessible(true);
                     Object value = field.get(dto);
 
                     if (value != null) {
                         Cell cell = dataRow.createCell(colIndex);
-                        setObjectCellValue(cell, value, sheet, rowIndex - 1, colIndex, workbook);
+                        setObjectCellValue(cell, value, sheet, rowIndex - 1, colIndex, workbook, styleService);
                     }
                     if (header.getDisplayName() != null)
                         colIndex++;
                 }
             }
 
-            // Auto size columns width
-            for (int colNum = colOffset; colNum < (headers.size() + colOffset); colNum++) {
+            // Auto-size columns.
+            // Note: Headers are created after data rows so that auto-sizing is driven by data width, not header width.
+            for (int colNum = colOffset; colNum < headers.size() + colOffset; colNum++) {
                 sheet.autoSizeColumn(colNum);
-
-                // Check if this column has minimum width defined on this specific header Enum
                 StyleDTO styles = headers.get(colNum - colOffset).getStyles();
-                int defaultColumnWidth = styles != null && styles.getMinWidth() != null ? styles.getMinWidth() * POI_DEFAULT_UNIT :
-                        DEFAULT_COLUMN_WIDTH;
-
-                // Force width (apache poi default unit of a character is 256)
-                sheet.setColumnWidth(colNum, Math.min(styles != null && styles.getMaxWidth() != null ?
-                                Math.min(MAX_COLUMN_WIDTH, (styles.getMaxWidth() * POI_DEFAULT_UNIT)) : MAX_COLUMN_WIDTH,
-                        DEFAULT_COLUMN_MARGIN + Math.max(defaultColumnWidth, sheet.getColumnWidth(colNum))));
+                sheet.setColumnWidth(colNum, calculateColumnWidth(sheet.getColumnWidth(colNum), styles));
             }
 
-            // Create header row.
-            // Note: The headers are created after data rows, so that the auto columns size doesn't take header's width into account
+            // Create header row
             Row headerRow = sheet.createRow(rowOffset);
             int colIndex = colOffset;
             for (ExcelHeaderBase header : headers) {
@@ -137,24 +129,19 @@ public class ExcelServiceImpl implements ExcelService {
                     cell.setCellValue(headerDisplayName);
 
                     StyleDTO styles = header.getStyles();
-                    if (styles != null) {
-                        CellStyle customHeaderCellStyle = styleService.getHeaderCellStyle(workbook, styles);
-                        cell.setCellStyle(customHeaderCellStyle);
-                    } else {
-                        cell.setCellStyle(styleService.getHeaderCellStyle());
-                    }
+                    CellStyle headerStyle = styles != null
+                            ? styleService.getHeaderCellStyle(workbook, styles)
+                            : styleService.getHeaderCellStyle();
+                    cell.setCellStyle(headerStyle);
                 }
             }
 
-            // Set headers height
             if (excelSettings.getExcelCustomStyles().getHeadersHeight() != null)
                 headerRow.setHeightInPoints(excelSettings.getExcelCustomStyles().getHeadersHeight().floatValue());
 
-            // Set header filters
             if (excelSettings.isHeaderFilterActive())
-                sheet.setAutoFilter(new CellRangeAddress(rowOffset, rowOffset, colOffset, headers.size()));
+                sheet.setAutoFilter(new CellRangeAddress(rowOffset, rowOffset, colOffset, colOffset + headers.size() - 1));
 
-            // Set freeze pane
             ExcelSettings.FreezePane freezePane = excelSettings.getFreezePane();
             if (freezePane != null)
                 sheet.createFreezePane(freezePane.getColSplit(), freezePane.getRowSplit(), freezePane.getLeftmostColumn(), freezePane.getTopRow());
@@ -162,21 +149,29 @@ public class ExcelServiceImpl implements ExcelService {
             return workbook;
         } catch (ReflectiveOperationException e) {
             log.error("Error generating dynamic excel sheet! Sheet name [{}]", sheetName, e);
+            throw new ExcelGenerationException(ResponseCode.ERROR_GENERATING_DYNAMIC_EXCEL.getMessage(), e);
         }
-
-        throw new Exception(ResponseCode.ERROR_GENERATING_DYNAMIC_EXCEL.getMessage());
     }
 
+    private int calculateColumnWidth(int autoSizedWidth, StyleDTO styles) {
+        int minWidth = styles != null && styles.getMinWidth() != null
+                ? styles.getMinWidth() * POI_DEFAULT_UNIT
+                : DEFAULT_COLUMN_WIDTH;
+        int maxWidth = styles != null && styles.getMaxWidth() != null
+                ? Math.min(MAX_COLUMN_WIDTH, styles.getMaxWidth() * POI_DEFAULT_UNIT)
+                : MAX_COLUMN_WIDTH;
+        return Math.min(maxWidth, DEFAULT_COLUMN_MARGIN + Math.max(minWidth, autoSizedWidth));
+    }
 
-    private void setObjectCellValue(Cell cell, Object value, Sheet sheet, int rowIndex, int colIndex, Workbook workbook) {
-        // Default style, this can change depending on the column type bellow
+    private void setObjectCellValue(Cell cell, Object value, Sheet sheet, int rowIndex, int colIndex,
+                                    Workbook workbook, StyleService styleService) {
         cell.setCellStyle(styleService.getDataCellStyle());
 
         if (value instanceof Date) {
             cell.setCellValue(DateUtils.getDateAsString((Date) value));
         } else if (value instanceof DateExcel) {
             DateExcel dateExcel = (DateExcel) value;
-            cell.setCellValue(dateExcel.getValue());
+            cell.setCellValue(DateUtils.getDateAsString(dateExcel.getValue(), dateExcel.getFormat()));
             cell.setCellStyle(styleService.getCellStyle(workbook, DateExcel.class, dateExcel.getStyles()));
         } else if (value instanceof StringExcel) {
             StringExcel stringExcel = (StringExcel) value;
@@ -193,26 +188,20 @@ public class ExcelServiceImpl implements ExcelService {
             String cellValue = merge.getValue();
             if (StringUtils.hasLength(cellValue)) {
                 if (merge.getRange() > 1) {
-                    switch (merge.getOrientation()) {
-                        case VERTICAL:
-                            sheet.addMergedRegion(new CellRangeAddress(rowIndex, rowIndex + merge.getRange() - 1, colIndex + merge.getOffset(),
-                                    colIndex + merge.getOffset()));
-                            break;
-                        case HORIZONTAL:
-                            sheet.addMergedRegion(new CellRangeAddress(rowIndex, rowIndex, colIndex + merge.getOffset(),
-                                    colIndex + merge.getOffset() + merge.getRange() - 1));
-                            break;
-                        default:
-                            break;
+                    if (merge.getOrientation() == Merge.Orientation.VERTICAL) {
+                        sheet.addMergedRegion(new CellRangeAddress(rowIndex, rowIndex + merge.getRange() - 1,
+                                colIndex + merge.getOffset(), colIndex + merge.getOffset()));
+                    } else if (merge.getOrientation() == Merge.Orientation.HORIZONTAL) {
+                        sheet.addMergedRegion(new CellRangeAddress(rowIndex, rowIndex,
+                                colIndex + merge.getOffset(), colIndex + merge.getOffset() + merge.getRange() - 1));
                     }
                 }
-
                 cell = sheet.getRow(rowIndex).createCell(colIndex + merge.getOffset());
                 cell.setCellValue(cellValue);
                 cell.setCellStyle(styleService.getCellStyle(workbook, Merge.class, merge.getStyles()));
             }
         } else {
-            cell.setCellValue(value == null ? "" : value.toString());
+            cell.setCellValue(value.toString());
         }
     }
 }

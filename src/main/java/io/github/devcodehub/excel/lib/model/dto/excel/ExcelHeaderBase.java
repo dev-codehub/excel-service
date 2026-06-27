@@ -6,6 +6,6 @@ public interface ExcelHeaderBase {
     String getDisplayName();
 
     default StyleDTO getStyles() {
-        return new StyleDTO();
+        return null;
     }
 }
