@@ -1,47 +1,33 @@
 # Excel Service
 
-A Java library that generates and reads Excel workbooks dynamically using Apache POI — with a single method call.
+> Gera e lê ficheiros Excel a partir de listas de DTOs Java com uma única chamada de método — sem boilerplate, sem configuração manual do Apache POI.
 
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.dev-codehub/excel-service)](https://central.sonatype.com/artifact/io.github.dev-codehub/excel-service)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
-
----
-
-## Table of Contents
-
-1. [Requirements](#requirements)
-2. [Technologies](#technologies)
-3. [Setup](#setup)
-4. [Features](#features)
-5. [Quick Start](#quick-start)
-6. [Writing Excel Files](#writing-excel-files)
-   - [Data Types](#data-types)
-   - [ExcelSettings](#excelsettings)
-   - [Styling](#styling)
-   - [Merging Cells](#merging-cells)
-7. [Reading Excel Files](#reading-excel-files)
-   - [ExcelReadSettings](#excelreadsettings)
-   - [Locating the Table by Keys](#locating-the-table-by-keys)
-8. [API Reference](#api-reference)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.dev-codehub/excel-service?color=1a7f37)](https://central.sonatype.com/artifact/io.github.dev-codehub/excel-service)
+[![Java](https://img.shields.io/badge/Java-8%2B-blue)](#)
+[![Apache POI](https://img.shields.io/badge/Apache%20POI-5.3.0-blue)](#)
+[![License](https://img.shields.io/badge/License-Apache%202.0-lightgrey)](http://www.apache.org/licenses/LICENSE-2.0)
 
 ---
 
-## Requirements
+## Índice
 
-- Java 8 or later
-- Spring Boot 2.x or later (auto-configuration is optional)
-
-## Technologies
-
-- Java 8
-- Spring Boot 2 (auto-configuration)
-- Apache POI 5.3.0
+- [Setup](#setup)
+- [Quick Start](#quick-start)
+- [Escrita de ficheiros Excel](#escrita-de-ficheiros-excel)
+  - [Tipos de dados](#tipos-de-dados)
+  - [ExcelSettings](#excelsettings)
+  - [Sistema de estilos](#sistema-de-estilos)
+  - [Merge de células](#merge-de-células)
+  - [Múltiplas folhas](#múltiplas-folhas)
+- [Leitura de ficheiros Excel](#leitura-de-ficheiros-excel)
+  - [ExcelReadSettings](#excelreadsettings)
+  - [Deteção automática de tabelas](#deteção-automática-de-tabelas)
+  - [Mapeamento de tipos](#mapeamento-de-tipos-na-leitura)
+- [API Reference](#api-reference)
 
 ---
 
 ## Setup
-
-Add the dependency to your `pom.xml`:
 
 ```xml
 <dependency>
@@ -51,7 +37,7 @@ Add the dependency to your `pom.xml`:
 </dependency>
 ```
 
-`ExcelService` is auto-configured as a Spring bean — inject it directly:
+A biblioteca regista-se automaticamente como bean Spring Boot — injeta diretamente:
 
 ```java
 @Service
@@ -66,111 +52,96 @@ public class ReportService {
 
 ---
 
-## Features
-
-| Feature | Description |
-|---|---|
-| Write | Generate `.xlsx` files from a list of DTOs |
-| Read | Parse `.xlsx` files back into a list of DTOs |
-| Styling | Per-cell, per-column, and global styles |
-| Merging | Horizontal and vertical cell merging |
-| Auto-filter | Enable column filter dropdowns on the header row |
-| Freeze pane | Lock rows/columns while scrolling |
-| Multiple sheets | Append new sheets to an existing workbook |
-| Table detection | Locate data tables by searching for header key words |
-
----
-
 ## Quick Start
 
-### Define your DTO
+### 1. Define o DTO
 
 ```java
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
 public class PersonDTO {
-    private String name;
-    private String email;
-    private Number salary;   // use Number wrapper for numeric cells
+    private String  name;
+    private String  email;
+    private Number  salary;    // wrapper Number → célula numérica
+    private Date    birthDate; // Date → formatado como yyyy/MM/dd
+    private Boolean active;    // Boolean → célula booleana nativa
 }
 ```
 
-### Define your header enum
+### 2. Define o enum de cabeçalhos
+
+O enum implementa `ExcelHeaderBase` e mapeia cada campo do DTO ao cabeçalho visível na coluna. O `field` tem de corresponder exatamente ao nome da propriedade no DTO.
 
 ```java
 @AllArgsConstructor
 public enum PersonHeader implements ExcelHeaderBase {
-    NAME("name",   "Name",   null),
-    EMAIL("email", "Email",  null),
-    SALARY("salary", "Salary", null);
+    NAME       ("name",      "Nome",            null),
+    EMAIL      ("email",     "Email",           null),
+    SALARY     ("salary",    "Salário",         null),
+    BIRTH_DATE ("birthDate", "Data Nascimento", null),
+    ACTIVE     ("active",    "Ativo",           null);
 
-    private final String field;
-    private final String displayName;
+    private final String   field;
+    private final String   displayName;
     private final StyleDTO styles;
 
-    @Override public String getField()       { return field; }
-    @Override public String getDisplayName() { return displayName; }
-    @Override public StyleDTO getStyles()    { return styles; }
+    @Override public String   getField()       { return field; }
+    @Override public String   getDisplayName() { return displayName; }
+    @Override public StyleDTO getStyles()      { return styles; }
 }
 ```
 
-### Write
+### 3. Escreve e lê
 
 ```java
-List<PersonDTO> people = repository.findAll();
+List<ExcelHeaderBase> headers = Arrays.asList(PersonHeader.values());
 
-ExcelSettings settings = ExcelSettings.builder()
-        .sheetName("People")
-        .headerFilterActive(true)
-        .build();
-
+// Escrever
 byte[] bytes = excelService.generateDynamicExcel(
-        Arrays.asList(PersonHeader.values()), people, PersonDTO.class, settings);
-```
+        headers, personList, PersonDTO.class,
+        ExcelSettings.builder().sheetName("Pessoas").headerFilterActive(true).build());
 
-### Read
-
-```java
-ExcelReadSettings readSettings = ExcelReadSettings.builder()
-        .sheetName("People")
-        .build();
-
-List<PersonDTO> people = excelService.readDynamicExcel(
-        bytes, Arrays.asList(PersonHeader.values()), PersonDTO.class, readSettings);
+// Ler
+List<PersonDTO> pessoas = excelService.readDynamicExcel(
+        bytes, headers, PersonDTO.class,
+        ExcelReadSettings.builder().sheetName("Pessoas").build());
 ```
 
 ---
 
-## Writing Excel Files
+## Escrita de ficheiros Excel
 
-### Data Types
+### Tipos de dados
 
-| Java type | Excel cell | Notes |
+O tipo Java da propriedade no DTO determina o tipo de célula criada. Para controlo total sobre o tipo de célula ou o estilo, usa os **wrappers** da biblioteca.
+
+| Tipo Java | Tipo de célula Excel | Notas |
 |---|---|---|
-| `String` | String | Written as-is |
-| `Boolean` | Boolean | Native boolean cell |
-| `Date` | String | Formatted as `yyyy/MM/dd` |
-| `StringExcel` | String | Same as `String` but supports per-cell styling |
-| `Number` | Numeric | Use for proper numeric cells (supports formulas, sorting) |
-| `DateExcel` | String | `Date` with a custom format pattern |
-| `Merge` | String | Merges a range of cells horizontally or vertically |
-| Any other type | String | `toString()` is called |
+| `String` | Texto | Escrito diretamente |
+| `Boolean` | Booleano | Célula booleana nativa |
+| `Date` | Texto | Formatado como `yyyy/MM/dd` |
+| `StringExcel` | Texto | Igual a `String` mas com estilo por célula |
+| `Number` | Numérico | Usar para somas, fórmulas e ordenação numérica |
+| `DateExcel` | Texto | `Date` com formato personalizado |
+| `Merge` | Texto | Funde células horizontal ou verticalmente |
+| Outro qualquer | Texto | `toString()` é chamado |
 
-**`StringExcel`** — string cell with optional style:
-```java
-StringExcel.fromValue("Hello")
-StringExcel.fromValue("Hello", StyleDTO.builder().bold(true).build())
-```
+> **Atenção:** Campos `Double` nativos são escritos como células de texto. Para células numéricas com round-trip de leitura, usa o wrapper `Number`.
 
-**`Number`** — numeric cell with optional style:
-```java
-Number.fromValue(1234.56)
-Number.fromValue(1234.56, StyleDTO.builder().foregroundColor(ExcelColor.LIGHT_GREEN).build())
-```
+**Exemplos de criação dos wrappers:**
 
-**`DateExcel`** — date cell with a custom format:
 ```java
-DateExcel.fromValue(new Date(), "dd/MM/yyyy")
-DateExcel.fromValue(new Date(), "dd/MM/yyyy", myStyleDTO)
+// StringExcel — texto com estilo opcional por célula
+StringExcel.fromValue("Aprovado")
+StringExcel.fromValue("Aprovado", StyleDTO.builder().foregroundColor(ExcelColor.LIGHT_GREEN).build())
+
+// Number — célula numérica
+Number.fromValue(1_500.75)
+Number.fromValue(1_500.75, StyleDTO.builder().horizontalAlignment(HorizontalAlignment.RIGHT).build())
+
+// DateExcel — data com formato personalizado
+DateExcel.fromValue(new Date())                       // usa yyyy/MM/dd
+DateExcel.fromValue(new Date(), "dd/MM/yyyy")         // formato personalizado
+DateExcel.fromValue(new Date(), "dd/MM/yyyy", style)  // com estilo
 ```
 
 ---
@@ -179,204 +150,264 @@ DateExcel.fromValue(new Date(), "dd/MM/yyyy", myStyleDTO)
 
 ```java
 ExcelSettings settings = ExcelSettings.builder()
-        .sheetName("Report")          // required
-        .rowOffset(2)                 // first data row starts at rowOffset + 1 (default: 0)
-        .colOffset(1)                 // all columns shifted right by colOffset (default: 0)
-        .headerFilterActive(true)     // enable auto-filter on the header row
+        .sheetName("Relatório")           // obrigatório
+        .rowOffset(2)                     // cabeçalho na linha 2, dados a partir da 3
+        .colOffset(1)                     // todas as colunas avançam 1 para a direita
+        .headerFilterActive(true)         // dropdown de filtro no cabeçalho
         .freezePane(ExcelSettings.FreezePane.builder()
-                .colSplit(1)          // freeze first column
-                .rowSplit(1)          // freeze first row
+                .colSplit(1)              // congela a primeira coluna
+                .rowSplit(1)             // congela a primeira linha
                 .build())
         .excelCustomStyles(ExcelCustomStyles.builder()
                 .headerBold(true)
-                .headerBorderActive(true)
-                .headerBorderColor(ExcelColor.BLUE)
                 .fontFamily("Arial")
                 .build())
         .build();
 ```
 
-**`ExcelSettings` fields:**
-
-| Field | Type | Default | Description |
+| Campo | Tipo | Default | Descrição |
 |---|---|---|---|
-| `sheetName` | `String` | — | Sheet name (required) |
-| `rowOffset` | `int` | `0` | Row index where the header row is written |
-| `colOffset` | `int` | `0` | Column index where the first column starts |
-| `headerFilterActive` | `boolean` | `false` | Adds a dropdown filter to the header row |
-| `freezePane` | `FreezePane` | `null` | Freezes rows/columns |
-| `excelCustomStyles` | `ExcelCustomStyles` | defaults | Global style overrides |
+| `sheetName` | `String` | — | Nome da folha **(obrigatório)** |
+| `rowOffset` | `int` | `0` | Índice da linha onde o cabeçalho é escrito |
+| `colOffset` | `int` | `0` | Índice da coluna onde a primeira coluna começa |
+| `headerFilterActive` | `boolean` | `false` | Dropdown de filtro na linha de cabeçalho |
+| `freezePane` | `FreezePane` | `null` | Congela linhas e/ou colunas durante o scroll |
+| `excelCustomStyles` | `ExcelCustomStyles` | *defaults* | Estilos globais da folha |
 
 ---
 
-### Styling
+### Sistema de estilos
 
-Styles are resolved from most specific to least specific:
+Os estilos são resolvidos por especificidade — o mais específico prevalece:
 
 ```
-Per-cell StyleDTO (on wrapper)  >  Per-column StyleDTO (on header enum)  >  ExcelCustomStyles (global)
+StyleDTO na célula  >  StyleDTO no cabeçalho (enum)  >  ExcelCustomStyles (global)
 ```
 
-**`StyleDTO` fields:**
+**`StyleDTO`** — controlo por célula ou por coluna:
 
-| Field | Type | Description |
+| Campo | Tipo | Descrição |
 |---|---|---|
-| `bold` | `Boolean` | Bold font |
-| `fontHeight` | `Double` | Font size in points |
-| `foregroundColor` | `ExcelColorBase` | Cell background colour |
-| `textColor` | `ExcelColorBase` | Font colour |
-| `horizontalAlignment` | `HorizontalAlignment` | POI enum (LEFT, CENTER, RIGHT…) |
-| `verticalAlignment` | `VerticalAlignment` | POI enum (TOP, CENTER, BOTTOM…) |
-| `minWidth` | `Integer` | Minimum column width in characters |
-| `maxWidth` | `Integer` | Maximum column width in characters |
+| `bold` | `Boolean` | Texto a negrito |
+| `fontHeight` | `Double` | Tamanho da fonte em pontos |
+| `foregroundColor` | `ExcelColorBase` | Cor de fundo da célula |
+| `textColor` | `ExcelColorBase` | Cor do texto |
+| `horizontalAlignment` | `HorizontalAlignment` | LEFT, CENTER, RIGHT… |
+| `verticalAlignment` | `VerticalAlignment` | TOP, CENTER, BOTTOM… |
+| `minWidth` | `Integer` | Largura mínima da coluna em caracteres |
+| `maxWidth` | `Integer` | Largura máxima da coluna em caracteres |
 
-**`ExcelCustomStyles` fields (global defaults):**
+**`ExcelCustomStyles`** — defaults globais definidos em `ExcelSettings`:
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `headerFontHeight` | `short` | `11` | Header font size |
-| `headersHeight` | `Double` | `24.0` | Header row height in points |
-| `headerBold` | `boolean` | `false` | Bold header font |
-| `headerBorderActive` | `boolean` | `true` | Show border on header cells |
-| `headerBorderColor` | `ExcelColorBase` | `BLACK` | Header border colour |
-| `dataCellFontHeight` | `short` | `11` | Data cell font size |
-| `dataCellBold` | `boolean` | `false` | Bold data font |
-| `dataBorderActive` | `boolean` | `false` | Show border on data cells |
-| `dataBorderColor` | `ExcelColorBase` | `LIGHT_GREY` | Data cell border colour |
-| `fontFamily` | `String` | `"Calibri"` | Font family for all cells |
+| Campo | Default | Descrição |
+|---|---|---|
+| `headerFontHeight` | `11` | Tamanho da fonte do cabeçalho |
+| `headersHeight` | `24.0` | Altura da linha de cabeçalho em pontos |
+| `headerBold` | `false` | Cabeçalho a negrito |
+| `headerBorderActive` | `true` | Borda nas células de cabeçalho |
+| `headerBorderColor` | `BLACK` | Cor da borda do cabeçalho |
+| `dataCellFontHeight` | `11` | Tamanho da fonte dos dados |
+| `dataCellBold` | `false` | Dados a negrito |
+| `dataBorderActive` | `false` | Borda nas células de dados |
+| `dataBorderColor` | `LIGHT_GREY` | Cor da borda dos dados |
+| `fontFamily` | `"Calibri"` | Família de fontes para todas as células |
 
-**Available colours** (`ExcelColor` enum):
+**`ExcelColor`** — cores disponíveis:
 
-`BLACK` · `BLUE` · `BLUE_ACCENT_1_LIGHTER_40` · `LIGHT_BLUE` · `BROWN` · `LIGHT_BROWN` · `LIGHT_CYAN` · `GREEN` · `LIGHT_GREEN` · `DARK_GREY` · `GREY` · `LIGHT_GREY` · `DARK_MINT` · `LIGHT_DARK_MINT` · `ORANGE` · `LIGHT_ORANGE` · `PURPLE` · `LIGHT_PURPLE` · `PINK` · `LIGHT_PINK` · `RED` · `LIGHT_RED` · `TEAL` · `LIGHT_TEAL` · `WHITE` · `YELLOW` · `LIGHT_YELLOW` · `YELLOW_BROWN` · `LIGHT_YELLOW_BROWN`
+<details>
+<summary>Ver paleta completa</summary>
 
-You can also implement `ExcelColorBase` to supply any custom RGB colour.
+| Constante | Constante | Constante |
+|---|---|---|
+| `BLACK` | `BLUE` | `BLUE_ACCENT_1_LIGHTER_40` |
+| `LIGHT_BLUE` | `BROWN` | `LIGHT_BROWN` |
+| `LIGHT_CYAN` | `GREEN` | `LIGHT_GREEN` |
+| `DARK_GREY` | `GREY` | `LIGHT_GREY` |
+| `DARK_MINT` | `LIGHT_DARK_MINT` | `ORANGE` |
+| `LIGHT_ORANGE` | `PURPLE` | `LIGHT_PURPLE` |
+| `PINK` | `LIGHT_PINK` | `RED` |
+| `LIGHT_RED` | `TEAL` | `LIGHT_TEAL` |
+| `WHITE` | `YELLOW` | `LIGHT_YELLOW` |
+| `YELLOW_BROWN` | `LIGHT_YELLOW_BROWN` | |
 
----
+Implementa `ExcelColorBase` para cores RGB personalizadas.
 
-### Merging Cells
-
-**Horizontal merge** — spans columns to the right:
-
-```java
-// Merge 3 cells horizontally, starting at the current column
-Merge.fromValue(3, 0, "Merged Header", Merge.Orientation.HORIZONTAL)
-```
-
-**Vertical merge** — spans rows downward:
-
-```java
-// Merge 2 rows vertically
-Merge.fromValue(2, 0, "Group Label", Merge.Orientation.VERTICAL)
-```
-
-`Merge.fromValue(int range, int offset, String value, Orientation orientation)`:
-- `range` — number of cells to span (must be > 1 to create a merged region)
-- `offset` — column offset relative to the current column index
-- `value` — text written in the first cell of the merged region
+</details>
 
 ---
 
-### Multiple Sheets
-
-Pass an existing `Workbook` to append a new sheet without losing previous content:
+### Merge de células
 
 ```java
-Workbook workbook = excelService.generateDynamicExcelWorkbook(
-        headers1, data1, DTO1.class, settings1);
+// Horizontal — funde 3 colunas a partir da posição atual
+Merge.fromValue(3, 0, "Dados Pessoais", Merge.Orientation.HORIZONTAL)
 
-workbook = excelService.generateDynamicExcelWorkbook(
-        headers2, data2, DTO2.class, settings2, workbook);
+// Vertical — funde 2 linhas a partir da linha atual
+Merge.fromValue(2, 0, "Grupo A", Merge.Orientation.VERTICAL)
 
-// Serialize to bytes when done
+// Com offset — começa 1 coluna à frente da posição atual do campo
+Merge.fromValue(2, 1, "Sub-cabeçalho", Merge.Orientation.HORIZONTAL)
+```
+
+| Parâmetro | Descrição |
+|---|---|
+| `range` | Número de células a fundir (> 1 para criar região fundida) |
+| `offset` | Deslocamento de coluna relativo à posição atual do campo no DTO |
+| `value` | Texto escrito na primeira célula da região fundida |
+| `orientation` | `HORIZONTAL` (expande colunas) ou `VERTICAL` (expande linhas) |
+
+---
+
+### Múltiplas folhas
+
+```java
+// Primeira folha — cria um Workbook novo
+Workbook wb = excelService.generateDynamicExcelWorkbook(
+        headers1, data1, Dto1.class,
+        ExcelSettings.builder().sheetName("Vendas").build());
+
+// Segunda folha — reutiliza o mesmo Workbook
+wb = excelService.generateDynamicExcelWorkbook(
+        headers2, data2, Dto2.class,
+        ExcelSettings.builder().sheetName("Clientes").build(), wb);
+
+// Serializar para bytes
 ByteArrayOutputStream out = new ByteArrayOutputStream();
-workbook.write(out);
-workbook.close();
+wb.write(out);
+wb.close();
 byte[] bytes = out.toByteArray();
 ```
 
 ---
 
-## Reading Excel Files
-
-Parse an `.xlsx` file back into a list of DTOs using the same header enum used to write it.
+## Leitura de ficheiros Excel
 
 ```java
-ExcelReadSettings readSettings = ExcelReadSettings.builder()
-        .sheetName("People")
+List<ExcelHeaderBase> headers = Arrays.asList(PersonHeader.values());
+
+ExcelReadSettings settings = ExcelReadSettings.builder()
+        .sheetName("Pessoas")
         .build();
 
-List<PersonDTO> people = excelService.readDynamicExcel(
-        bytes, Arrays.asList(PersonHeader.values()), PersonDTO.class, readSettings);
+List<PersonDTO> pessoas = excelService.readDynamicExcel(
+        bytes, headers, PersonDTO.class, settings);
 ```
 
-The reader maps columns by matching the **display name** of each header constant to the text found in the header row of the sheet. Only columns present in both the enum and the sheet are populated; unrecognised columns are ignored.
-
-**Cell type mapping on read:**
-
-| Excel cell type | Java field type | Result |
-|---|---|---|
-| String | `String` | String value |
-| String | `StringExcel` | `StringExcel.fromValue(...)` |
-| Numeric (integer) | `Integer` / `Long` | Cast from double |
-| Numeric (decimal) | `Double` | Raw double |
-| Numeric (decimal) | `Number` | `Number.fromValue(...)` |
-| Boolean | `Boolean` | Boolean value |
-| Formula | any | Evaluated before mapping |
-| Blank / null | any | Field left as `null` |
-
-> **Note:** Plain `Double` fields written by the library are stored as string cells (no `Number` wrapper) and cannot be read back into a `Double` field. Use the `Number` wrapper type for numeric fields that need to survive a write/read round-trip.
+A biblioteca mapeia colunas comparando o texto das células do cabeçalho com o `displayName` de cada enum. Colunas desconhecidas são ignoradas. O DTO deve ter um construtor sem argumentos.
 
 ---
 
 ### ExcelReadSettings
 
-| Field | Type | Default | Description |
+| Campo | Tipo | Default | Descrição |
 |---|---|---|---|
-| `sheetName` | `String` | — | Sheet to read (required) |
-| `rowOffset` | `int` | `0` | Row index of the header row when `searchKeys` is empty |
-| `colOffset` | `int` | `0` | Ignore columns to the left of this index |
-| `searchKeys` | `List<String>` | `[]` | Display names used to locate the header row automatically |
-| `maxScanRows` | `int` | `0` | Scan limit when using `searchKeys` (0 = no limit) |
+| `sheetName` | `String` | — | Folha a ler **(obrigatório)** |
+| `rowOffset` | `int` | `0` | Linha de cabeçalho (usado quando `searchKeys` está vazio) |
+| `colOffset` | `int` | `0` | Ignora colunas à esquerda deste índice |
+| `searchKeys` | `List<String>` | `[]` | Nomes de colunas para localizar o cabeçalho automaticamente |
+| `maxScanRows` | `int` | `0` | Limite de linhas a percorrer com `searchKeys` (0 = sem limite) |
 
 ---
 
-### Locating the Table by Keys
+### Deteção automática de tabelas
 
-When a sheet contains preamble content (titles, metadata) before the actual data table, use `searchKeys` to let the reader find the header row automatically:
+Quando a folha tem conteúdo antes da tabela (títulos, metadados), usa `searchKeys` para localizar o cabeçalho sem saber o índice da linha.
 
 ```java
-ExcelReadSettings readSettings = ExcelReadSettings.builder()
-        .sheetName("Report")
-        .searchKeys(Arrays.asList("Name", "Email", "Salary"))
-        .maxScanRows(20)   // stop scanning after 20 rows
-        .build();
+// A folha pode ter preamble antes da tabela:
+// Linha 0: "Relatório Anual"
+// Linha 1: "Gerado em: 2024-01-15"
+// Linha 2: (vazia)
+// Linha 3: "Nome" | "Email" | "Salário"  ← cabeçalho encontrado aqui
+// Linha 4+: dados
 
-List<PersonDTO> people = excelService.readDynamicExcel(
-        bytes, Arrays.asList(PersonHeader.values()), PersonDTO.class, readSettings);
+ExcelReadSettings settings = ExcelReadSettings.builder()
+        .sheetName("Pessoas")
+        .searchKeys(Arrays.asList("Nome", "Email"))  // basta um subconjunto único
+        .maxScanRows(20)                              // para após 20 linhas
+        .build();
 ```
 
-The reader scans each row until it finds one whose string cells contain **all** the specified keys. That row becomes the header row, and data is read from the next row onward. An `ExcelGenerationException` is thrown if the keys are not found within the scan limit.
+> Se as `searchKeys` não forem encontradas dentro do limite `maxScanRows`, é lançado `ExcelGenerationException`.
+
+---
+
+### Mapeamento de tipos na leitura
+
+| Célula Excel | Tipo do campo no DTO | Resultado |
+|---|---|---|
+| Texto | `String` | Valor como string |
+| Texto | `StringExcel` | `StringExcel.fromValue(...)` |
+| Numérico (inteiro) | `Integer` / `int` | Cast de double para int |
+| Numérico (inteiro) | `Long` / `long` | Cast de double para long |
+| Numérico (decimal) | `Double` / `double` | Valor double bruto |
+| Numérico | `Number` | `Number.fromValue(...)` |
+| Numérico (data) | `Date` | Data nativa |
+| Numérico (data) | `DateExcel` | `DateExcel.fromValue(...)` |
+| Booleano | `Boolean` | Valor booleano |
+| Fórmula | qualquer | Avaliada antes do mapeamento |
+| Em branco / null | qualquer | Campo fica `null` |
 
 ---
 
 ## API Reference
 
+Todos os métodos lançam `ExcelGenerationException` (checked) em caso de validação inválida, folha não encontrada ou erro de I/O.
+
+### Escrita
+
 ```java
-// Write — returns byte array
-byte[] generateDynamicExcel(headers, data, dataClass, settings) throws ExcelGenerationException;
+// Gera e devolve bytes prontos a enviar ou guardar
+byte[] generateDynamicExcel(
+    List<? extends ExcelHeaderBase> headers,
+    List<?> data,
+    Class<?> dataClass,
+    ExcelSettings settings) throws ExcelGenerationException;
 
-// Write — appends to an existing workbook
-byte[] generateDynamicExcel(headers, data, dataClass, settings, workbook) throws ExcelGenerationException;
+// Igual, mas adiciona uma nova folha a um Workbook existente
+byte[] generateDynamicExcel(
+    List<? extends ExcelHeaderBase> headers,
+    List<?> data,
+    Class<?> dataClass,
+    ExcelSettings settings,
+    Workbook workbook) throws ExcelGenerationException;
 
-// Write — returns Workbook for multi-sheet scenarios
-Workbook generateDynamicExcelWorkbook(headers, data, dataClass, settings) throws ExcelGenerationException;
-Workbook generateDynamicExcelWorkbook(headers, data, dataClass, settings, workbook) throws ExcelGenerationException;
+// Devolve o Workbook POI — útil para cenários de múltiplas folhas
+Workbook generateDynamicExcelWorkbook(
+    List<? extends ExcelHeaderBase> headers,
+    List<?> data,
+    Class<?> dataClass,
+    ExcelSettings settings) throws ExcelGenerationException;
 
-// Read — from byte array
-<T> List<T> readDynamicExcel(byte[] data, headers, dataClass, settings) throws ExcelGenerationException;
-
-// Read — from an open Workbook (caller manages lifecycle)
-<T> List<T> readDynamicExcel(Workbook workbook, headers, dataClass, settings) throws ExcelGenerationException;
+// Adiciona uma folha a um Workbook existente e devolve-o
+Workbook generateDynamicExcelWorkbook(
+    List<? extends ExcelHeaderBase> headers,
+    List<?> data,
+    Class<?> dataClass,
+    ExcelSettings settings,
+    Workbook workbook) throws ExcelGenerationException;
 ```
 
-All methods throw `ExcelGenerationException` (a checked exception) on validation errors, missing sheets, or I/O failures.
+### Leitura
+
+```java
+// Analisa bytes de um .xlsx e devolve lista de DTOs
+<T> List<T> readDynamicExcel(
+    byte[] data,
+    List<? extends ExcelHeaderBase> headers,
+    Class<T> dataClass,
+    ExcelReadSettings settings) throws ExcelGenerationException;
+
+// Analisa um Workbook já aberto (ciclo de vida é responsabilidade do chamador)
+<T> List<T> readDynamicExcel(
+    Workbook workbook,
+    List<? extends ExcelHeaderBase> headers,
+    Class<T> dataClass,
+    ExcelReadSettings settings) throws ExcelGenerationException;
+```
+
+---
+
+## Licença
+
+Distribuído sob a [Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0).
