@@ -11,6 +11,7 @@ import io.github.devcodehub.excel.lib.model.dto.excel.datatype.StringExcel;
 import io.github.devcodehub.excel.lib.model.dto.exception.ExcelGenerationException;
 import io.github.devcodehub.excel.lib.model.dto.exception.ResponseCode;
 import io.github.devcodehub.excel.lib.utils.DateUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
@@ -22,8 +23,6 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -41,14 +40,14 @@ import java.util.Map;
 import java.util.Set;
 
 @Lazy
+@Slf4j
 @Service
 public class ExcelServiceImpl implements ExcelService {
     private static final int POI_DEFAULT_UNIT = 256;
     private static final int DEFAULT_COLUMN_WIDTH = 10 * POI_DEFAULT_UNIT;
     private static final int MAX_COLUMN_WIDTH = 255 * POI_DEFAULT_UNIT;
     private static final int DEFAULT_COLUMN_MARGIN = 5 * POI_DEFAULT_UNIT;
-
-    private final Logger log = LoggerFactory.getLogger(this.getClass());
+    private StyleService styleService;
 
     // ── Write ─────────────────────────────────────────────────────────────────
 
