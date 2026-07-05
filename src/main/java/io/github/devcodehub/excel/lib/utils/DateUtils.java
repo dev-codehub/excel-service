@@ -1,7 +1,7 @@
 package io.github.devcodehub.excel.lib.utils;
 
-import java.text.Format;
-import java.text.SimpleDateFormat;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 public class DateUtils {
@@ -15,7 +15,7 @@ public class DateUtils {
         if (date == null) {
             return null;
         }
-        Format formatter = new SimpleDateFormat(pattern);
-        return formatter.format(date);
+        return DateTimeFormatter.ofPattern(pattern)
+                .format(date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
     }
 }

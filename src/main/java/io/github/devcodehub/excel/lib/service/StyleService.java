@@ -16,12 +16,15 @@ import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.extensions.XSSFCellBorder;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class StyleService {
-    public static final List<XSSFCellBorder.BorderSide> BORDER_SIDES = Arrays.asList(XSSFCellBorder.BorderSide.TOP, XSSFCellBorder.BorderSide.BOTTOM, XSSFCellBorder.BorderSide.LEFT, XSSFCellBorder.BorderSide.RIGHT);
+    public static final List<XSSFCellBorder.BorderSide> BORDER_SIDES = Collections.unmodifiableList(
+            Arrays.asList(XSSFCellBorder.BorderSide.TOP, XSSFCellBorder.BorderSide.BOTTOM,
+                    XSSFCellBorder.BorderSide.LEFT, XSSFCellBorder.BorderSide.RIGHT));
 
     @Getter
     private final CellStyle headerCellStyle;

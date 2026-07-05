@@ -31,7 +31,7 @@ public class ExcelCustomStyles {
     @Builder.Default
     private ExcelColorBase dataBorderColor = ExcelColor.LIGHT_GREY;
     @Builder.Default
-    public String fontFamily = "Calibri";
+    private String fontFamily = "Calibri";
 
     public void setHeaderBorderColor(ExcelColorBase headerBorderColor) {
         this.headerBorderColor = headerBorderColor;

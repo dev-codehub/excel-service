@@ -70,5 +70,5 @@ public enum ExcelColor implements ExcelColorBase {
     YELLOW_BROWN(new XSSFColor(new byte[]{(byte) 255, (byte) 192, (byte) 0})),
     LIGHT_YELLOW_BROWN(new XSSFColor(new byte[]{(byte) 255, (byte) 242, (byte) 204}));
 
-    final XSSFColor color;
+    private final XSSFColor color;
 }
