@@ -33,6 +33,24 @@ There is no linter configured. Java 8 source/target compatibility is enforced by
 
 GPG signing lives in a `release` Maven profile, so a plain `mvn clean install` runs on machines without GPG installed. Signing only happens when `-Prelease` is passed (used for Maven Central publishing).
 
+## Public API
+
+`ExcelService` exposes four write overloads and two read overloads:
+
+```java
+// Write — returns byte[] or Workbook; pass an existing Workbook to add a sheet to it
+byte[]   generateDynamicExcel(headers, data, dataClass, ExcelSettings)
+byte[]   generateDynamicExcel(headers, data, dataClass, ExcelSettings, Workbook)
+Workbook generateDynamicExcelWorkbook(headers, data, dataClass, ExcelSettings)
+Workbook generateDynamicExcelWorkbook(headers, data, dataClass, ExcelSettings, Workbook)
+
+// Read — byte[] overload opens via WorkbookFactory and delegates to the Workbook overload
+<T> List<T> readDynamicExcel(byte[],    headers, Class<T>, ExcelReadSettings)
+<T> List<T> readDynamicExcel(Workbook,  headers, Class<T>, ExcelReadSettings)
+```
+
+All methods throw the checked `ExcelGenerationException`.
+
 ## Architecture
 
 The library is bidirectional: it **writes** POJO lists to `.xlsx` and **reads** `.xlsx` back into POJO lists. Both directions live in `ExcelServiceImpl` and are driven by the same `ExcelHeaderBase` enum (field ⇄ display-name mapping).
@@ -68,23 +86,21 @@ Caller
 
 **`ExcelHeaderBase`** — implemented as an enum by the caller. Each constant maps a POJO field name (`getField()`) to a display name (`getDisplayName()`) and optional per-column `StyleDTO`.
 
-**`ExcelSettings`** — configures a **write**: sheet name, row/column offsets, custom global styles (`ExcelCustomStyles`), filter, and freeze pane.
+**`ExcelSettings`** — configures a **write**: sheet name, row/column offsets, custom global styles (`ExcelCustomStyles`), filter, and freeze pane. Contains a nested `FreezePane` builder with fields `colSplit`, `rowSplit`, and optional `leftmostColumn`/`topRow` (fall back to the split values when absent).
 
-**`ExcelReadSettings`** — configures a **read**: sheet name, `rowOffset`/`colOffset`, `searchKeys` (locate the table by content instead of a fixed offset), and `maxScanRows`. Sheet name is required; a missing sheet or unlocatable header throws `ExcelGenerationException`.
+**`ExcelReadSettings`** — configures a **read**: sheet name, `rowOffset`/`colOffset`, `searchKeys` (locate the table by content instead of a fixed offset), and `maxScanRows` (`0` = unlimited). Sheet name is required; a missing sheet or unlocatable header throws `ExcelGenerationException`.
 
-**Data type wrappers** (`DateExcel`, `StringExcel`, `Number`, `Merge`) — wrap raw values and carry an optional `StyleDTO` for per-cell styling. If a field's value is a plain Java type (`String`, `Boolean`, `Date`), it is handled directly without a wrapper.
+**Data type wrappers** (`DateExcel`, `StringExcel`, `Number`, `Merge`) — wrap raw values and carry an optional `StyleDTO` for per-cell styling. Plain Java types `String`, `Boolean`, `Double`, `Integer`, `Long`, and `Date` are handled directly without a wrapper.
 
-**`StyleService`** — instantiated fresh per `generateDynamicExcelWorkbook` call because POI `CellStyle` objects are bound to a specific `Workbook` instance. It holds one default style per data type and creates new styles on demand via `getNewCellStyle` (clone → override).
+**`Merge.Orientation`** — `VERTICAL` merges rows, `HORIZONTAL` merges columns. `offset` positions the merged cell relative to the current column index; `range` defines how many cells to span.
+
+**`StyleService`** — instantiated fresh per `generateDynamicExcelWorkbook` call because POI `CellStyle` objects are bound to a specific `Workbook` instance. Not a Spring bean. It holds one default style per data type and creates new styles on demand via `getNewCellStyle` (clone → override).
 
 ### Style resolution order (most specific wins)
 
 ```
 Per-cell StyleDTO (on wrapper)  >  Per-column StyleDTO (on header enum)  >  ExcelCustomStyles (global defaults)
 ```
-
-### `Merge` type behaviour
-
-`Merge` allows merging multiple cells either vertically or horizontally. The `offset` field positions the merged cell relative to the current column index, and `range` defines how many cells to span.
 
 ### Spring auto-configuration
 
@@ -93,12 +109,15 @@ Per-cell StyleDTO (on wrapper)  >  Per-column StyleDTO (on header enum)  >  Exce
 ## Conventions
 
 - All model classes use Lombok (`@Getter`, `@Setter`, `@Builder`, `@NoArgsConstructor`, `@AllArgsConstructor`).
-- Colors are represented via `ExcelColor` (enum) or any `ExcelColorBase` implementation, backed by XSSF RGB byte arrays.
+- Colors are represented via `ExcelColor` (enum, 27 constants) or any `ExcelColorBase` implementation, backed by XSSF RGB byte arrays.
 - POI width unit: 1 character = 256 units. Constants `DEFAULT_COLUMN_WIDTH`, `MAX_COLUMN_WIDTH`, and `DEFAULT_COLUMN_MARGIN` in `ExcelServiceImpl` control auto-sizing bounds.
 - Reflection (`getDeclaredField` + `setAccessible(true)`) is used to read/write private fields on data POJOs — field names in header enums must match exactly. Read additionally requires a no-args constructor on `dataClass`.
 - All public methods throw the checked `ExcelGenerationException`; user-facing messages come from the `ResponseCode` enum.
+- Default date format (`DateUtils.DEFAULT_DATE_FORMAT`) is `"yyyy/MM/dd"`.
 - The library targets Java 8; avoid using APIs introduced after Java 8.
 
 ## Tests
 
-JUnit 5 (`junit-jupiter`), run by `maven-surefire-plugin`. Tests live under `src/test/java` mirroring the main package layout, split by concern: `ExcelServiceImplWriteTest`, `ExcelServiceImplReadTest`, `StyleServiceTest`, plus utility tests (`DateUtilsTest`, `ExcelUtilsTest`). Write/read tests round-trip through real in-memory POI workbooks (no mocking of POI). `src/main/.../model/dto/example/` (`ExampleDTO`, `ExcelExampleHeader`) provides reusable fixtures for both tests and documentation.
+JUnit 5 (`junit-jupiter`), run by `maven-surefire-plugin`. Tests live under `src/test/java` mirroring the main package layout, split by concern: `ExcelServiceImplWriteTest`, `ExcelServiceImplReadTest`, `StyleServiceTest`, plus utility tests (`DateUtilsTest`, `ExcelUtilsTest`). Write/read tests round-trip through real in-memory POI workbooks (no mocking of POI).
+
+Shared fixtures in `src/main/.../model/dto/example/` (`ExampleDTO`, `ExcelExampleHeader`) are used for documentation and basic smoke tests. Each test file also defines its own local fixture DTOs and header enums for targeted scenarios: `ExcelServiceImplWriteTest` uses `BasicDTO/BasicHeader`, `AllTypesDTO/AllTypesHeader`, and `MergeDTO/MergeHeader`; `ExcelServiceImplReadTest` uses `PersonDTO/PersonHeader` and `TypedDTO/TypedHeader`.
