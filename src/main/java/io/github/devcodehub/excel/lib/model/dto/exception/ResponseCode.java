@@ -20,6 +20,7 @@ public enum ResponseCode {
     INTERNAL_SERVER_ERROR(500, 0, "Internal Server Error"),
     ERROR_GENERATING_DYNAMIC_EXCEL(500, 1, "Error generating dynamic excel"),
     ERROR_GENERATING_CSV(500, 2, "Error generating csv"),
+    ERROR_READING_CSV(500, 3, "Error reading csv"),
     NOT_IMPLEMENTED(501, 0, "Not Implemented"),
     UNAVAILABLE(503, 0, "Unavailable");
 

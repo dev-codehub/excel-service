@@ -12,4 +12,9 @@ public interface CsvService {
                        List<?> data,
                        Class<?> dataClass,
                        CsvSettings settings) throws CsvGenerationException;
+
+    <T> List<T> readCsv(byte[] csv,
+                        List<? extends CsvHeaderBase> headers,
+                        Class<T> dataClass,
+                        CsvSettings settings) throws CsvGenerationException;
 }
